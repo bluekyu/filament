@@ -1,0 +1,30 @@
+material {
+    name : mix,
+    shadingModel : unlit,
+    depthWrite: false,
+    depthCulling: false,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color
+        },
+        {
+            type : sampler2d,
+            name : secondary
+        }
+    ],
+    requires: [
+        uv0
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        vec4 primary = texture(materialParams_color, getUV0());
+        vec4 blurred = texture(materialParams_secondary, getUV0());
+        // HACK: this is a crude bloom effect
+        float L = max(0.0, max(blurred.r, max(blurred.g, blurred.b)) - 1.0);
+        material.baseColor = mix(primary, blurred, min(1.0, L));
+    }
+}

@@ -1,0 +1,32 @@
+material {
+    name : blur,
+    shadingModel : unlit,
+    depthWrite: false,
+    depthCulling: false,
+    parameters : [
+        {
+            type : sampler2d,
+            name : color
+        },
+        {
+            type : float4[9],
+            name : weights
+        }
+    ],
+    requires: [
+        uv0
+    ]
+
+}
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        float2 uv = gl_FragCoord.xy;
+        vec4 c = vec4(0);
+        for (int i = 0; i < 9; i++) {
+            float2 st = (uv + materialParams.weights[i].yz) * getResolution().zw;
+            c += texture(materialParams_color, st) * materialParams.weights[i].x;
+        }
+        material.baseColor = c;
+    }
+}

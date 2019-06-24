@@ -114,29 +114,40 @@ class MainActivity : Activity() {
         engine = Engine.create()
         renderer = engine.createRenderer()
 
-        finalScene = engine.createScene()
-        finalView = engine.createView()
-        finalCamera = engine.createCamera()
-        finalView.scene = finalScene
-        finalView.camera = finalCamera
-
         primary.scene = engine.createScene()
         primary.camera = engine.createCamera()
         primary.view = engine.createView()
+        primary.view!!.setName("primary")
         primary.view!!.scene = primary.scene
         primary.view!!.camera = primary.camera
+        primary.view!!.toneMapping = View.ToneMapping.LINEAR
+        primary.view!!.dithering = View.Dithering.NONE
 
         hblur.scene = engine.createScene()
         hblur.camera = engine.createCamera()
         hblur.view = engine.createView()
+        hblur.view!!.setName("hblur")
         hblur.view!!.scene = hblur.scene
         hblur.view!!.camera = hblur.camera
+        hblur.view!!.sampleCount = 1
+        hblur.view!!.isPostProcessingEnabled = false
 
         vblur.scene = engine.createScene()
         vblur.camera = engine.createCamera()
         vblur.view = engine.createView()
+        vblur.view!!.setName("vblur")
         vblur.view!!.scene = vblur.scene
         vblur.view!!.camera = vblur.camera
+        vblur.view!!.sampleCount = 1
+        vblur.view!!.isPostProcessingEnabled = false
+
+        finalScene = engine.createScene()
+        finalView = engine.createView()
+        finalView.setName("final")
+        finalCamera = engine.createCamera()
+        finalView.scene = finalScene
+        finalView.camera = finalCamera
+        finalView.sampleCount = 1
 
         // Materials
         // ---------
@@ -155,8 +166,8 @@ class MainActivity : Activity() {
         ibl = loadIbl(assets, "envs/venetian_crossroads_2k", engine)
         ibl.indirectLight.intensity = 40_000.0f
 
-        finalScene.skybox = ibl.skybox
-        finalScene.indirectLight = ibl.indirectLight
+        primary.scene!!.skybox = ibl.skybox
+        primary.scene!!.indirectLight = ibl.indirectLight
 
         // glTF Entities, Textures, and Materials
         // --------------------------------------
@@ -173,7 +184,7 @@ class MainActivity : Activity() {
         // we can destroy it immediately.
         ResourceLoader(engine).loadResources(filamentAsset).destroy()
 
-        finalScene.addEntities(filamentAsset.entities)
+        primary.scene!!.addEntities(filamentAsset.entities)
         engine.transformManager.setTransform(engine.transformManager.getInstance(filamentAsset.root),
                 floatArrayOf(
                         1.0f,  0.0f, 0.0f, 0.0f,
@@ -195,7 +206,7 @@ class MainActivity : Activity() {
                 .castShadows(true)
                 .build(engine, light)
 
-        finalScene.addEntity(light)
+        primary.scene!!.addEntity(light)
 
         // Start Animation
         // ---------------
@@ -206,7 +217,7 @@ class MainActivity : Activity() {
         animator.repeatCount = ValueAnimator.INFINITE
         animator.addUpdateListener { a ->
             val v = (a.animatedValue as Float)
-            finalCamera.lookAt(cos(v) * 4.5, 1.5, sin(v) * 4.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+            primary.camera!!.lookAt(cos(v) * 4.5, 1.5, sin(v) * 4.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         }
         animator.start()
     }
@@ -253,9 +264,27 @@ class MainActivity : Activity() {
                 .texture(RenderTarget.AttachmentPoint.COLOR, vblur.color)
                 .build(engine)
 
-        finalQuad = createQuad(engine, ImageOp.MIX, primary.color!!, vblur.color)
         hblurQuad = createQuad(engine, ImageOp.HBLUR, primary.color!!)
         vblurQuad = createQuad(engine, ImageOp.VBLUR, hblur.color!!)
+        finalQuad = createQuad(engine, ImageOp.MIX, primary.color!!, vblur.color)
+
+        hblur.scene!!.addEntity(hblurQuad)
+        vblur.scene!!.addEntity(vblurQuad)
+        finalScene.addEntity(finalQuad)
+
+        primary.view!!.viewport = Viewport(0, 0, width, height)
+        primary.view!!.setRenderTarget(primary.target)
+
+        hblur.view!!.viewport = Viewport(0, 0, width, height)
+        hblur.view!!.setRenderTarget(hblur.target)
+        hblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
+
+        vblur.view!!.viewport = Viewport(0, 0, width, height)
+        vblur.view!!.setRenderTarget(vblur.target)
+        vblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
+
+        finalView.viewport = Viewport(0, 0, width, height)
+        finalCamera.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
     }
 
     @Entity private fun createQuad(engine: Engine, op: ImageOp, primary: Texture, secondary: Texture? = null): Int {
@@ -396,15 +425,17 @@ class MainActivity : Activity() {
         }
 
         override fun onResized(width: Int, height: Int) {
-            val aspect = width.toDouble() / height.toDouble()
-            finalCamera.setProjection(45.0, aspect, 0.1, 20.0, Camera.Fov.VERTICAL)
 
-            finalView.viewport = Viewport(0, 0, width, height)
-
-            // Finally create RenderTarget objects, now that we know the size of the view.
+            // Lazily create RenderTarget objects, now that we know the size of the view.
             if (primary.color == null) {
                 initRenderTargets()
             }
+
+            val aspect = width.toDouble() / height.toDouble()
+            primary.camera!!.setProjection(45.0, aspect, 0.1, 20.0, Camera.Fov.VERTICAL)
+
+            primary.view!!.viewport = Viewport(0, 0, width, height)
+
         }
     }
 

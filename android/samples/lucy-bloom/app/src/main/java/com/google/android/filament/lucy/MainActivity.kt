@@ -202,7 +202,7 @@ class MainActivity : Activity() {
             val primCount = rm.getPrimitiveCount(instance)
             for (primIndex in 0 until primCount) {
                 val mi = rm.getMaterialInstanceAt(instance, primIndex)
-                mi.setParameter("roughnessFactor", 0.25f)
+                mi.setParameter("roughnessFactor", 0.1f)
                 mi.setParameter("baseColorFactor", 0.5f, 0.5f, 0.0f, 1.0f)
             }
         }
@@ -290,14 +290,14 @@ class MainActivity : Activity() {
         finalScene.addEntity(finalQuad)
 
         primary.view!!.viewport = Viewport(0, 0, width, height)
-        primary.view!!.setRenderTarget(primary.target)
+        primary.view!!.renderTarget = primary.target
 
         hblur.view!!.viewport = Viewport(0, 0, width, height)
-        hblur.view!!.setRenderTarget(hblur.target)
+        hblur.view!!.renderTarget = hblur.target
         hblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0)
 
         vblur.view!!.viewport = Viewport(0, 0, width, height)
-        vblur.view!!.setRenderTarget(vblur.target)
+        vblur.view!!.renderTarget = vblur.target
         vblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0)
 
         finalView.viewport = Viewport(0, 0, width, height)

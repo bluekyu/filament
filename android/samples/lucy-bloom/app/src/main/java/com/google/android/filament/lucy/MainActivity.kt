@@ -196,14 +196,16 @@ class MainActivity : Activity() {
                         0.0f, -1.7f, 0.0f, 1.0f
                 ))
 
-        // Tweak model materials
-//        auto begin = app.asset->getMaterialInstances();
-//        auto end = begin + app.asset->getMaterialInstanceCount();
-//        for (auto iter = begin; iter != end; ++iter) {
-//            (*iter)->setParameter("roughnessFactor", 0.25f);
-//            (*iter)->setParameter("baseColorFactor", float4 {1.0, 0.6, 0.5, 1.0});
-//        }
-
+        val rm = engine.renderableManager
+        for (entity in filamentAsset.entities) {
+            val instance = rm.getInstance(entity)
+            val primCount = rm.getPrimitiveCount(instance)
+            for (primIndex in 0 until primCount) {
+                val mi = rm.getMaterialInstanceAt(instance, primIndex)
+                mi.setParameter("roughnessFactor", 0.25f)
+                mi.setParameter("baseColorFactor", 0.5f, 0.5f, 0.0f, 1.0f)
+            }
+        }
 
         // Punctual Light Sources
         // ----------------------

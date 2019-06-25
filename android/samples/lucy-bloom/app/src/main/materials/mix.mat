@@ -25,6 +25,6 @@ fragment {
         vec4 blurred = texture(materialParams_secondary, getUV0());
         // HACK: this is a crude bloom effect
         float L = max(0.0, max(blurred.r, max(blurred.g, blurred.b)) - 1.0);
-        material.baseColor = mix(primary, blurred, min(1.0, L));
+        material.baseColor = blurred; // mix(primary, blurred, min(1.0, L));
     }
 }

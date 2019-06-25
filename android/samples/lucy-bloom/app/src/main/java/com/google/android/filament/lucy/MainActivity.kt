@@ -33,8 +33,7 @@ import com.google.android.filament.gltfio.MaterialProvider
 import com.google.android.filament.gltfio.ResourceLoader
 
 import java.nio.ByteBuffer
-import java.nio.FloatBuffer
-import java.nio.ShortBuffer
+import java.nio.ByteOrder
 import java.nio.channels.Channels
 import kotlin.math.*
 
@@ -82,6 +81,9 @@ class MainActivity : Activity() {
     private val primary = Framebuffer()
     private val hblur = Framebuffer()
     private val vblur = Framebuffer()
+
+    private var quadVertBufferGpu: VertexBuffer? = null
+    private var quadIndxBufferGpu: IndexBuffer? = null
 
     enum class ImageOp { MIX, HBLUR, VBLUR}
 
@@ -277,18 +279,20 @@ class MainActivity : Activity() {
 
         hblur.view!!.viewport = Viewport(0, 0, width, height)
         hblur.view!!.setRenderTarget(hblur.target)
-        hblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
+        hblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0)
 
         vblur.view!!.viewport = Viewport(0, 0, width, height)
         vblur.view!!.setRenderTarget(vblur.target)
-        vblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
+        vblur.camera!!.setProjection(Camera.Projection.ORTHO, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0)
 
         finalView.viewport = Viewport(0, 0, width, height)
-        finalCamera.setProjection(Camera.Projection.ORTHO, 0.0, width.toDouble(), height.toDouble(), 0.0, 0.0, 1.0)
+        finalCamera.setProjection(Camera.Projection.ORTHO, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0)
     }
 
     @Entity private fun createQuad(engine: Engine, op: ImageOp, primary: Texture, secondary: Texture? = null): Int {
-        val vb = {
+
+        if (quadVertBufferGpu == null) {
+
             val vb = VertexBuffer.Builder()
                     .vertexCount(4)
                     .bufferCount(1)
@@ -296,25 +300,60 @@ class MainActivity : Activity() {
                     .attribute(VertexBuffer.VertexAttribute.UV0, 0, VertexBuffer.AttributeType.FLOAT2, 8, 16)
                     .build(engine)
 
-            val floatBuffer = FloatBuffer.allocate(16)
-            floatBuffer.put(floatArrayOf(
-                    0.0f, 0.0f, 0.0f, 0.0f,
-                    1.0f, 0.0f, 1.0f, 0.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f, 1.0f))
-            vb.apply { setBufferAt(engine, 0, floatBuffer) }
-        }.invoke()
+            val quadVertBuffer = ByteBuffer.allocateDirect(16 * 4).order(ByteOrder.LITTLE_ENDIAN)
 
-        val ib = {
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(0.0f)
+
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(0.0f)
+
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(0.0f)
+            quadVertBuffer.putFloat(1.0f)
+
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(1.0f)
+            quadVertBuffer.putFloat(1.0f)
+
+            quadVertBuffer.flip()
+
+            vb.setBufferAt(engine, 0, quadVertBuffer)
+
+            quadVertBufferGpu = vb
+        }
+        val vb = quadVertBufferGpu!!
+
+        ////////////////////////////////////////////////////////////////////
+
+        if (quadIndxBufferGpu == null) {
+
             val ib = IndexBuffer.Builder()
                     .indexCount(6)
                     .bufferType(IndexBuffer.Builder.IndexType.USHORT)
                     .build(engine)
 
-            val intBuffer = ShortBuffer.allocate(6)
-            intBuffer.put(shortArrayOf(2, 1, 0, 1, 2, 3))
-            ib.apply { setBuffer(engine, intBuffer) }
-        }.invoke()
+            val buf = ByteBuffer.allocateDirect(6 * 2).order(ByteOrder.LITTLE_ENDIAN)
+            buf.putShort(2)
+            buf.putShort(1)
+            buf.putShort(0)
+            buf.putShort(1)
+            buf.putShort(2)
+            buf.putShort(3)
+            buf.flip()
+
+            ib.setBuffer(engine, buf)
+            quadIndxBufferGpu = ib
+        }
+        val ib = quadIndxBufferGpu!!
+
+        ////////////////////////////////////////////////////////////////////
 
         val sampler = TextureSampler(TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR, TextureSampler.WrapMode.CLAMP_TO_EDGE)
 
@@ -342,8 +381,8 @@ class MainActivity : Activity() {
 
         RenderableManager.Builder(1)
                 .boundingBox(Box(0.0f, 0.0f, 0.0f, 9000.0f, 9000.0f, 9000.0f))
-                .material(0, material)
                 .geometry(0, RenderableManager.PrimitiveType.TRIANGLES, vb, ib)
+                .material(0, material)
                 .build(engine, entity)
 
         return entity

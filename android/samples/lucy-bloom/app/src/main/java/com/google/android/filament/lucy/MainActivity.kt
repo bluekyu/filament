@@ -147,6 +147,7 @@ class MainActivity : Activity() {
         finalView = engine.createView()
         finalView.setName("final")
         finalCamera = engine.createCamera()
+        finalCamera.setExposure(16.0f, 1.0f / 125.0f, 100.0f)
         finalView.scene = finalScene
         finalView.camera = finalCamera
         finalView.sampleCount = 1
@@ -166,7 +167,7 @@ class MainActivity : Activity() {
         // ------------------------
 
         ibl = loadIbl(assets, "envs/venetian_crossroads_2k", engine)
-        ibl.indirectLight.intensity = 40_000.0f
+        ibl.indirectLight.intensity = 180_000.0f
 
         primary.scene!!.skybox = ibl.skybox
         primary.scene!!.indirectLight = ibl.indirectLight
@@ -195,6 +196,15 @@ class MainActivity : Activity() {
                         0.0f, -1.7f, 0.0f, 1.0f
                 ))
 
+        // Tweak model materials
+//        auto begin = app.asset->getMaterialInstances();
+//        auto end = begin + app.asset->getMaterialInstanceCount();
+//        for (auto iter = begin; iter != end; ++iter) {
+//            (*iter)->setParameter("roughnessFactor", 0.25f);
+//            (*iter)->setParameter("baseColorFactor", float4 {1.0, 0.6, 0.5, 1.0});
+//        }
+
+
         // Punctual Light Sources
         // ----------------------
 
@@ -203,8 +213,8 @@ class MainActivity : Activity() {
         val (r, g, b) = Colors.cct(6_500.0f)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
-                .intensity(110_000.0f)
-                .direction(-0.753f, -1.0f, 0.890f)
+                .intensity(50_000.0f)
+                .direction(-0.753f, -1.0f, -0.890f)
                 .castShadows(true)
                 .build(engine, light)
 
@@ -219,7 +229,10 @@ class MainActivity : Activity() {
         animator.repeatCount = ValueAnimator.INFINITE
         animator.addUpdateListener { a ->
             val v = (a.animatedValue as Float)
-            primary.camera!!.lookAt(cos(v) * 4.5, 1.5, sin(v) * 4.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+            primary.camera!!.lookAt(
+                    cos(v) * 4.75, 0.0, sin(v) * 4.75,
+                    0.0, -0.1, 0.0,
+                    0.0, 1.0, 0.0)
         }
         animator.start()
     }
@@ -357,15 +370,19 @@ class MainActivity : Activity() {
 
         val sampler = TextureSampler(TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR, TextureSampler.WrapMode.CLAMP_TO_EDGE)
 
+        android.util.Log.i("lucy-bloom", "There are ${kGaussianWeights.size} floats")
+
         val material = when (op) {
             ImageOp.HBLUR -> {
+                // Extract the first half of the weights array for the horizontal pass.
                 this.blurMaterial.createInstance().apply {
-                    setParameter("weights", MaterialInstance.FloatElement.FLOAT4, floatArrayOf(1.0f, 2.0f, 3.0f, 4.0f), 0, 1)
+                    setParameter("weights", MaterialInstance.FloatElement.FLOAT4, kGaussianWeights, 0, kGaussianSampleCount)
                 }
             }
             ImageOp.VBLUR -> {
+                // Extract the second half of the weights array for the vertical pass.
                 this.blurMaterial.createInstance().apply {
-                    setParameter("weights", MaterialInstance.FloatElement.FLOAT4, floatArrayOf(1.0f, 2.0f, 3.0f, 4.0f), 0, 1)
+                    setParameter("weights", MaterialInstance.FloatElement.FLOAT4, kGaussianWeights, kGaussianSampleCount, kGaussianSampleCount)
                 }
             }
             ImageOp.MIX -> {

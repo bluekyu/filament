@@ -70,7 +70,7 @@ class MainActivity : Activity() {
     private lateinit var finalView: View
     private lateinit var finalCamera: Camera
 
-    private val kGaussianFilterSize = 17
+    private val kGaussianFilterSize = 21
     private val kGaussianSampleCount = 1 + kGaussianFilterSize / 2
     private val kGaussianWeights = FloatArray(kGaussianSampleCount * 4 * 2)
 
@@ -122,8 +122,8 @@ class MainActivity : Activity() {
         primary.view!!.setName("primary")
         primary.view!!.scene = primary.scene
         primary.view!!.camera = primary.camera
-        primary.view!!.toneMapping = View.ToneMapping.LINEAR
         primary.view!!.dithering = View.Dithering.NONE
+        primary.view!!.toneMapping = View.ToneMapping.LINEAR
 
         hblur.scene = engine.createScene()
         hblur.camera = engine.createCamera()
@@ -167,7 +167,7 @@ class MainActivity : Activity() {
         // ------------------------
 
         ibl = loadIbl(assets, "envs/venetian_crossroads_2k", engine)
-        ibl.indirectLight.intensity = 180_000.0f
+        ibl.indirectLight.intensity = 100_000.0f
 
         primary.scene!!.skybox = ibl.skybox
         primary.scene!!.indirectLight = ibl.indirectLight
@@ -215,8 +215,8 @@ class MainActivity : Activity() {
         val (r, g, b) = Colors.cct(6_500.0f)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
-                .intensity(50_000.0f)
-                .direction(-0.753f, -1.0f, -0.890f)
+                .intensity(100_000.0f)
+                .direction(0.0f, -1.0f, 0.0f)
                 .castShadows(true)
                 .build(engine, light)
 
@@ -372,19 +372,19 @@ class MainActivity : Activity() {
 
         val sampler = TextureSampler(TextureSampler.MinFilter.LINEAR, TextureSampler.MagFilter.LINEAR, TextureSampler.WrapMode.CLAMP_TO_EDGE)
 
-        android.util.Log.i("lucy-bloom", "There are ${kGaussianWeights.size} floats")
-
         val material = when (op) {
             ImageOp.HBLUR -> {
                 // Extract the first half of the weights array for the horizontal pass.
                 this.blurMaterial.createInstance().apply {
                     setParameter("weights", MaterialInstance.FloatElement.FLOAT4, kGaussianWeights, 0, kGaussianSampleCount)
+                    setParameter("horizontal", true)
                 }
             }
             ImageOp.VBLUR -> {
                 // Extract the second half of the weights array for the vertical pass.
                 this.blurMaterial.createInstance().apply {
                     setParameter("weights", MaterialInstance.FloatElement.FLOAT4, kGaussianWeights, kGaussianSampleCount, kGaussianSampleCount)
+                    setParameter("horizontal", false)
                 }
             }
             ImageOp.MIX -> {

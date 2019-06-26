@@ -9,8 +9,12 @@ material {
             name : color
         },
         {
-            type : float4[9],
+            type : float4[11],
             name : weights
+        },
+        {
+            type : bool,
+            name : horizontal
         }
     ],
     requires: [
@@ -19,14 +23,26 @@ material {
 
 }
 fragment {
-    const float kBlurRadius = 2.0;
+
+    const int kGaussianSampleCount = 11;
+
+    vec3 Tonemap_ReinhardWeighted(const vec3 x, float weight) {
+        // Weighted Reinhard tone-mapping operator designed for post-processing
+        // This tone-mapping operator is invertible
+        return x * (weight / (max3(x) + 1.0));
+    }
+
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        vec4 c = vec4(0);
-        for (int i = 0; i < 9; i++) {
-            float2 st = getUV0() + kBlurRadius * materialParams.weights[i].yz * getResolution().zw;
-            c += texture(materialParams_color, st) * materialParams.weights[i].x;
+        vec3 c = vec3(0);
+        for (int i = 0; i < kGaussianSampleCount; i++) {
+            float2 st = getUV0() + materialParams.weights[i].yz * getResolution().zw;
+            vec3 color = texture(materialParams_color, st).rgb;
+            if (materialParams.horizontal) {
+                color = Tonemap_ReinhardWeighted(color, 1.0);
+            }
+            c += color * materialParams.weights[i].x;
         }
-        material.baseColor = c;
+        material.baseColor.rgb = c;
     }
 }

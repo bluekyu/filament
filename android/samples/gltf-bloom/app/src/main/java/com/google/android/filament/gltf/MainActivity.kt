@@ -157,7 +157,7 @@ class MainActivity : Activity() {
 
         readUncompressedAsset("envs/pillars_ibl.ktx").let {
             primary.scene.indirectLight = KtxLoader.createIndirectLight(engine, it, KtxLoader.Options())
-            primary.scene.indirectLight!!.intensity = 50_000.0f
+            primary.scene.indirectLight!!.intensity = 30_000.0f
         }
 
         readUncompressedAsset("envs/pillars_skybox.ktx").let {
@@ -202,8 +202,8 @@ class MainActivity : Activity() {
             val primCount = rm.getPrimitiveCount(instance)
             for (primIndex in 0 until primCount) {
                 val mi = rm.getMaterialInstanceAt(instance, primIndex)
-                mi.setParameter("roughnessFactor", 0.1f)
-                mi.setParameter("baseColorFactor", 0.5f, 0.5f, 0.0f, 1.0f)
+                mi.setParameter("roughnessFactor", 0.0f)
+                mi.setParameter("baseColorFactor", 0.1f, 0.1f, 0.1f, 1.0f)
             }
         }
 
@@ -215,7 +215,7 @@ class MainActivity : Activity() {
         val (r, g, b) = Colors.cct(6_500.0f)
         LightManager.Builder(LightManager.Type.DIRECTIONAL)
                 .color(r, g, b)
-                .intensity(300_000.0f)
+                .intensity(100_000.0f)
                 .direction(0.0f, -1.0f, 0.0f)
                 .castShadows(true)
                 .build(engine, light)

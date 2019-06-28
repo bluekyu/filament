@@ -22,6 +22,10 @@
 
 #include <image/KtxBundle.h>
 
+#include <utils/Log.h>
+
+using namespace utils;
+
 namespace image {
 
 /**
@@ -76,6 +80,9 @@ namespace KtxUtility {
                 texformat = Texture::InternalFormat::SRGB8_A8;
             }
         }
+
+        slog.e << "prideout lucy Ktx Texture " << ktxinfo.pixelWidth << "x" << ktxinfo.pixelHeight << " " << (int) texformat << " " << (srgb ? 1 : 0) << io::endl;
+        slog.e << "prideout lucy Ktx Texture " << (int) cdatatype << " " << (int) datatype << " " << (int) dataformat << io::endl;
 
         Texture* texture = Texture::Builder()
             .width(ktxinfo.pixelWidth)
